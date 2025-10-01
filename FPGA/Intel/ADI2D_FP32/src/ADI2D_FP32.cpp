@@ -400,16 +400,11 @@ int main(int argc, char* argv[]) {
   if (argc > 5) times = std::stoi(argv[5]);
 
   nx = (nx % 8 == 0 ? nx : (nx/8+1)*8);
-  // Create device selector for the device of your interest.
-#if FPGA_EMULATOR
-  // DPC++ extension: FPGA emulator selector on systems without FPGA card.
-  INTEL::fpga_emulator_selector d_selector;
-#elif FPGA
-  // DPC++ extension: FPGA selector on systems with FPGA card.
-  INTEL::fpga_selector d_selector;
+
+#if FPGA
+  auto d_selector = sycl::ext::intel::fpga_selector_v;
 #else
-  // The default device selector will select the most performant device.
-  default_selector d_selector;
+  auto d_selector = sycl::ext::intel::fpga_emulator_selector_v;
 #endif
 
   // Create vector objects with "vector_size" to store the input and output data.
