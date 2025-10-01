@@ -24,12 +24,12 @@ ADI2D_FP32_usm.fpga_emu_usm: $(USM_SRC)
 a.o: $(SRC)
 	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xsboard=intel_s10sx_pac:pac_s10
 a_usm.o: $(USM_SRC) 
-	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1	-Xsboard=intel_s10sx_pac:pac_s10_usm
+	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xsboard=intel_s10sx_pac:pac_s10_usm
 
 ADI2D_FP32.fpga: a.o
 	$(CXX) $(CXXFLAGS) -fintelfpga $^ -o $@ -Xshardware -Xsboard=intel_s10sx_pac:pac_s10
 ADI2D_FP32_usm.fpga: a_usm.o
-	$(CXX) $(CXXFLAGS) -fintelfpga $^ -o $@ -Xshardware  -Xsboard=intel_s10sx_pac:pac_s10_usm
+	$(CXX) $(CXXFLAGS) -fintelfpga $^ -o $@ -Xshardware -Xsboard=intel_s10sx_pac:pac_s10_usm
 
 run_emu: ADI2D_FP32.fpga_emu
 	./ADI2D_FP32.fpga_emu 2 32 32 8
@@ -52,7 +52,7 @@ dev_usm.o: $(USM_SRC)
 ADI2D_FP32_report.a: dev.o
 	$(CXX) $(CXXFLAGS) -fintelfpga -fsycl-link $^ -o $@ -Xshardware -Xsboard=intel_s10sx_pac:pac_s10
 ADI2D_FP32_usm_report.a_usm: dev_usm.o
-	$(CXX) $(CXXFLAGS) -fintelfpga -fsycl-link $^ -o $@ -Xshardware  -Xsboard=intel_s10sx_pac:pac_s10_usm
+	$(CXX) $(CXXFLAGS) -fintelfpga -fsycl-link $^ -o $@ -Xshardware -Xsboard=intel_s10sx_pac:pac_s10_usm
 
 
 clean:
