@@ -1,5 +1,6 @@
-CXX := dpcpp
-CXXFLAGS = -O2 -g -std=c++17
+CXX := icpx
+CXXFLAGS = -O2 -std=c++17
+CXXFLAGS_DEBUG = -g -O0 -std=c++17
 
 SRC := src/ADI2D_FP32.cpp
 USM_SRC := src/ADI2D_FP32_usm.cpp
@@ -16,7 +17,7 @@ report: ADI2D_FP32_report.a
 report_usm: ADI2D_FP32_usm_report.a_usm
 
 ADI2D_FP32.fpga_emu: $(SRC)
-	$(CXX) $(CXXFLAGS) -g -fintelfpga $^ -o $@ -DFPGA_EMULATOR=1 -Xsboard=intel_s10sx_pac:pac_s10
+	$(CXX) $(CXXFLAGS_DEBUG) -fintelfpga $^ -o $@ -DFPGA_EMULATOR=1 -Xsboard=intel_s10sx_pac:pac_s10
 ADI2D_FP32_usm.fpga_emu_usm: $(USM_SRC)
 	$(CXX) $(CXXFLAGS) -fintelfpga $^ -o $@ -DFPGA_EMULATOR=1 -Xsboard=intel_s10sx_pac:pac_s10_usm
 
