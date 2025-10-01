@@ -1,10 +1,10 @@
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 #include <vector>
 #include <iostream>
 #include "dpc_common.hpp"
 #if FPGA || FPGA_EMULATOR
-#include <CL/sycl/INTEL/fpga_extensions.hpp>
-#include <CL/sycl/INTEL/ac_types/ac_int.hpp>
+#include <sycl/ext/intel/fpga_extensions.hpp>
+#include <sycl/ext/intel/ac_types/ac_int.hpp>
 #endif
 
 
