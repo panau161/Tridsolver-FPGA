@@ -1,6 +1,6 @@
 CXX := icpx
 CXXFLAGS = -O2 -std=c++17
-CXXFLAGS_DEBUG = -g -O0 -std=c++17
+CXXFLAGS_DEBUG = -g -O0 -fsanitize=address -fno-omit-frame-pointer -std=c++17
 
 SRC := src/ADI2D_FP32.cpp
 USM_SRC := src/ADI2D_FP32_usm.cpp
