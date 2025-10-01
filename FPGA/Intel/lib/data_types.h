@@ -30,8 +30,8 @@ size_t vector_size = 10000;
 typedef std::vector<struct dPath16> IntVector; 
 typedef std::vector<float> IntVectorS; 
 
-using rd_pipe = INTEL::pipe<class pVec16_r, dPath16, 512000>;
-using wr_pipe = INTEL::pipe<class pVec16_w, dPath16, 512000>;
+using rd_pipe = ext::intel::pipe<class pVec16_r, dPath16, 512000>;
+using wr_pipe = ext::intel::pipe<class pVec16_w, dPath16, 512000>;
 
 #define D_MAX 64
 
@@ -41,7 +41,7 @@ struct pipeS{
 
   template <size_t idx>
   struct Pipes{
-    using pipeA = INTEL::pipe<struct_id<idx>, dPath, 64>;
+    using pipeA = ext::intel::pipe<struct_id<idx>, dPath, 64>;
   };
 
   template <size_t idx>
@@ -54,7 +54,7 @@ struct pipeM{
 
   template <size_t idx>
   struct PipeM{
-    using pipeA = INTEL::pipe<struct_id<idx>, dPath16, 1024>;
+    using pipeA = ext::intel::pipe<struct_id<idx>, dPath16, 1024>;
   };
 
   template <size_t idx>
@@ -68,7 +68,7 @@ struct pipeB{
 
   template <size_t idx>
   struct PipeB{
-    using pipeA = INTEL::pipe<struct_id<idx>, dPath, 6000>;
+    using pipeA = ext::intel::pipe<struct_id<idx>, dPath, 6000>;
   };
 
   template <size_t idx>
@@ -78,8 +78,8 @@ struct pipeB{
 
 using PipeBlock = pipeS;
 
-// using rd_pipe1 = INTEL::pipe<class rd_pipe1, dPath, 8>;
-// using wr_pipe1 = INTEL::pipe<class wr_pipe1, dPath, 8>;
+// using rd_pipe1 = ext::intel::pipe<class rd_pipe1, dPath, 8>;
+// using wr_pipe1 = ext::intel::pipe<class wr_pipe1, dPath, 8>;
 
 
 // Create an exception handler for asynchronous SYCL exceptions
