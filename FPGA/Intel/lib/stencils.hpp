@@ -1,11 +1,11 @@
 #include "data_types.h"
+#include "dpc_common.hpp"
+#include <iostream>
 #include <sycl/sycl.hpp>
 #include <vector>
-#include <iostream>
-#include "dpc_common.hpp"
 #if FPGA || FPGA_EMULATOR
-#include <sycl/ext/intel/fpga_extensions.hpp>
 #include <sycl/ext/intel/ac_types/ac_int.hpp>
+#include <sycl/ext/intel/fpga_extensions.hpp>
 #endif
 
 #ifndef __STENCILS_H__
@@ -13,23 +13,22 @@
 
 using namespace sycl;
 
-template <size_t idx>  struct stencil_2d_id;
+template <size_t idx>
+struct stencil_2d_id;
 template <bool FPPREC, class DType, int DMAX, int Pidx1, int Pidx2, int acc_idx1, int acc_idx2>
-event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool skip_process){
+event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool skip_process) {
 
-    #define SHIFT (3-FPPREC)
-    #define VFACTOR ((1 << SHIFT))
-    #define DSIZE   (256/VFACTOR)
+#define SHIFT (3 - FPPREC)
+#define VFACTOR ((1 << SHIFT))
+#define DSIZE (256 / VFACTOR)
 
-
-    event e = q.submit([&](handler &h) {
-    h.single_task<class stencil_2d_id<Pidx1>>([=] () [[intel::kernel_args_restrict]]{
-
-    [[intel::disable_loop_pipelining]]
-    for(unsigned short u_itr = 0; u_itr < n_iter; u_itr++){
+  event e = q.submit([&](handler &h) {
+    h.single_task<class stencil_2d_id<Pidx1>>([=]() [[intel::kernel_args_restrict]] {
+      [[intel::disable_loop_pipelining]]
+      for (unsigned short u_itr = 0; u_itr < n_iter; u_itr++) {
 
         short end_index = data_g.end_index;
-         bool dnt_acc_updt = ((u_itr == 0 && Pidx1 == 0)  ? 1 : 0);
+        bool dnt_acc_updt = ((u_itr == 0 && Pidx1 == 0) ? 1 : 0);
 
         // Registers to hold data specified by stencil
         DType row_arr3[VFACTOR];
@@ -40,12 +39,11 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
         DType acc_in_arr[VFACTOR];
 
         // cyclic buffers to hold larger number of elements
-        struct dPath row1_n[DMAX/VFACTOR];
-        struct dPath row2_n[DMAX/VFACTOR];
-        struct dPath row3_n[DMAX/VFACTOR];
+        struct dPath row1_n[DMAX / VFACTOR];
+        struct dPath row2_n[DMAX / VFACTOR];
+        struct dPath row3_n[DMAX / VFACTOR];
 
-        struct dPath row1_acc_n[DMAX/VFACTOR];
-
+        struct dPath row1_acc_n[DMAX / VFACTOR];
 
         unsigned short sizex = data_g.sizex;
         unsigned short end_row = data_g.end_row;
@@ -64,132 +62,119 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 
         struct dPath tmp2_acc, tmp2_acc_f1;
 
-
         // flattened loop to reduce the inter loop latency
         short i = 0, j = 0, j_l = 0;
         short i_d = 0, j_d = 0, j_l_d = 0;
 
         [[intel::initiation_interval(1)]]
-        for(unsigned int itr = 0; itr < grid_size; itr++) {
+        for (unsigned int itr = 0; itr < grid_size; itr++) {
 
+          i = i_d;
+          j = j_d;
 
-            i = i_d;
-            j = j_d;
+          bool cmp_j = (j == end_index - 1);
+          bool cmp_i = (i == outer_loop_limit - 1);
 
-            bool cmp_j = (j == end_index -1 );
-            bool cmp_i = (i == outer_loop_limit -1);
+          if (cmp_j) {
+            j_d = 0;
+          } else {
+            j_d++;
+          }
 
-            if(cmp_j){
-                j_d = 0;
-            } else {
-                j_d++;
-            }
+          if (cmp_j && cmp_i) {
+            i_d = 1;
+          } else if (cmp_j) {
+            i_d++;
+          }
 
-            if(cmp_j && cmp_i){
-                i_d = 1;
-            } else if(cmp_j){
-                i_d++;
-            }
+          // line buffer
+          j_l = j_l_d;
+          if (j_l >= end_index - 2) {
+            j_l_d = 0;
+          } else {
+            j_l_d++;
+          }
 
-                       // line buffer
-            j_l = j_l_d;
-            if(j_l >= end_index - 2){
-                j_l_d = 0;
-            } else {
-            	j_l_d++;
-            }
+          tmp1 = row2_n[j_l];
 
+          tmp2_b1 = tmp2;
+          row2_n[j_l] = tmp2_b1;
 
-            tmp1 = row2_n[j_l];
+          tmp2 = tmp2_f1;
+          tmp2_f1 = row1_n[j_l];
 
-            tmp2_b1 = tmp2;
-            row2_n[j_l] = tmp2_b1;
+          tmp2_acc = tmp2_acc_f1;
+          tmp2_acc_f1 = row1_acc_n[j_l];
 
-            tmp2 = tmp2_f1;
-            tmp2_f1 = row1_n[j_l];
+          // continuous data-flow for all the grids in the batch
+          bool cond_tmp1 = (itr < grid_data_size);
+          if (cond_tmp1) {
+            rd_in_vec = pipeS::PipeAt<Pidx1>::read();
+            acc_in_vec = pipeS::PipeAt<acc_idx1>::read();
+          }
 
-            tmp2_acc = tmp2_acc_f1;
-            tmp2_acc_f1 = row1_acc_n[j_l];
+#pragma unroll
+          for (int v = 0; v < VFACTOR; v++) {
+            DType tmp = acc_in_vec.data[v] + rd_in_vec.data[v];
+            tmp3.data[v] = skip_process ? rd_in_vec.data[v] : tmp;
+          }
 
-            // continuous data-flow for all the grids in the batch
-            bool cond_tmp1 = (itr < grid_data_size);
-            if(cond_tmp1){
-                rd_in_vec= pipeS::PipeAt<Pidx1>::read();
-                acc_in_vec = pipeS::PipeAt<acc_idx1>::read();
-            }
+          row1_n[j_l] = tmp3; // rd_in_vec; //tmp3;
+          row1_acc_n[j_l] = acc_in_vec;
 
-            #pragma unroll
-            for(int v = 0; v < VFACTOR; v++){
-                DType tmp = acc_in_vec.data[v] + rd_in_vec.data[v];
-                tmp3.data[v] = skip_process? rd_in_vec.data[v] : tmp;
+#pragma unroll
+          for (int k = 0; k < VFACTOR; k++) {
+            row_arr3[k] = tmp3.data[k];
+            row_arr2[k + 1] = tmp2.data[k];
+            row_arr1[k] = tmp1.data[k];
+            acc_in_arr[k] = tmp2_acc.data[k];
+          }
 
-            }
+          row_arr2[0] = tmp2_b1.data[VFACTOR - 1];
+          row_arr2[VFACTOR + 1] = tmp2_f1.data[0];
 
+// stencil computation
+// this loop will be completely unrolled as parent loop is pipelined
+#pragma unroll
+          for (short q = 0; q < VFACTOR; q++) {
+            short index = (j << SHIFT) + q;
+            DType r1 = ((row_arr2[q]) + (row_arr2[q + 2]));
 
-            row1_n[j_l] = tmp3; //rd_in_vec; //tmp3;
-            row1_acc_n[j_l] = acc_in_vec;
+            DType r2 = (row_arr1[q] + row_arr3[q]);
 
+            DType f1 = r1 + r2;
+            DType result = f1 - row_arr2[q + 1] * 6.0f;
+            bool change_cond = (index <= 0 || index > sizex || (i == 1) || (i == end_row));
+            DType final_val = change_cond ? 0.0f : result;
+            mem_wr[q] = skip_process ? row_arr2[q + 1] : final_val;
 
- 
+            a_arr[q] = change_cond ? 0.0f : -0.5f;
+            b_arr[q] = change_cond ? 1.0f : 2.0f;
+            c_arr[q] = change_cond ? 0.0f : -0.5f;
+            acc_out_arr[q] = dnt_acc_updt ? acc_in_arr[q] : row_arr2[q + 1];
+          }
 
-            #pragma unroll
-            for(int k = 0; k < VFACTOR; k++){
-                row_arr3[k] =  tmp3.data[k];
-                row_arr2[k+1] = tmp2.data[k];
-                row_arr1[k] =  tmp1.data[k];
-                acc_in_arr[k] = tmp2_acc.data[k];
+#pragma unroll
+          for (int k = 0; k < VFACTOR; k++) {
+            update_j.data[k] = mem_wr[k];
+            acc_out_vec.data[k] = acc_out_arr[k];
+          }
 
-            }
-
-            row_arr2[0] = tmp2_b1.data[VFACTOR-1];
-            row_arr2[VFACTOR + 1] = tmp2_f1.data[0];
-
-
-            // stencil computation
-            // this loop will be completely unrolled as parent loop is pipelined
-            #pragma unroll
-            for(short q = 0; q < VFACTOR; q++){
-                short index = (j << SHIFT) + q;
-                DType r1 = ( (row_arr2[q])  + (row_arr2[q+2]) );
-
-                DType r2 = ( row_arr1[q]  + row_arr3[q] );
-
-                DType f1 = r1 + r2;
-                DType result  = f1 - row_arr2[q+1]*6.0f;
-                bool change_cond = (index <= 0 || index > sizex || (i == 1) || (i == end_row));
-                DType final_val = change_cond ? 0.0f : result;
-                mem_wr[q] = skip_process ? row_arr2[q+1] : final_val;
-
-                a_arr[q] = change_cond ? 0.0f : -0.5f;
-                b_arr[q] = change_cond ? 1.0f :  2.0f;
-                c_arr[q] = change_cond ? 0.0f : -0.5f;
-                acc_out_arr[q] = dnt_acc_updt? acc_in_arr[q] : row_arr2[q+1];
-            }
-
-            #pragma unroll
-            for(int k = 0; k < VFACTOR; k++){
-                update_j.data[k] = mem_wr[k];
-                acc_out_vec.data[k] = acc_out_arr[k];
-            }
-
-            // conditional write to stream interface
-            bool cond_wr = (i >= 1);
-            if(cond_wr ) {
-                pipeS::PipeAt<Pidx2>::write(update_j);
-                pipeS::PipeAt<acc_idx2>::write(acc_out_vec);
-            }
-
+          // conditional write to stream interface
+          bool cond_wr = (i >= 1);
+          if (cond_wr) {
+            pipeS::PipeAt<Pidx2>::write(update_j);
+            pipeS::PipeAt<acc_idx2>::write(acc_out_vec);
+          }
         }
-        
-    }
-    #undef SHIFT
-    #undef VFACTOR
-    #undef DSIZE
-    
+      }
+#undef SHIFT
+#undef VFACTOR
+#undef DSIZE
     });
-    });
+  });
 
-    return e;
+  return e;
 }
 
 // template <bool FPPREC, class DType, int DMAX>
@@ -210,7 +195,6 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 //     DType a_arr[VFACTOR], b_arr[VFACTOR], c_arr[VFACTOR];
 //     DType acc_in_arr[VFACTOR];
 
-
 //     // partioning array into individual registers
 //     #pragma HLS ARRAY_PARTITION variable=row_arr3 complete dim=1
 //     #pragma HLS ARRAY_PARTITION variable=row_arr2 complete dim=1
@@ -221,14 +205,12 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 //     #pragma HLS ARRAY_PARTITION variable=b_arr complete dim=1
 //     #pragma HLS ARRAY_PARTITION variable=c_arr complete dim=1
 
-
 //     // cyclic buffers to hold larger number of elements
 //     uint256_dt row1_n[DMAX/VFACTOR];
 //     uint256_dt row2_n[DMAX/VFACTOR];
 //     uint256_dt row3_n[DMAX/VFACTOR];
 
 //     uint256_dt row1_acc_n[DMAX/VFACTOR];
-
 
 //     unsigned short sizex = data_g.sizex;
 //     unsigned short end_row = data_g.end_row;
@@ -246,7 +228,6 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 //     uint256_dt update_j, a_vec_out, b_vec_out, c_vec_out;
 
 //     uint256_dt tmp2_acc, tmp2_acc_f1;
-
 
 //     // flattened loop to reduce the inter loop latency
 //     unsigned short i = 0, j = 0, j_l = 0;
@@ -273,7 +254,6 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 //             i_d++;
 //         }
 
-
 //         tmp1 = row2_n[j_l];
 
 //         tmp2_b1 = tmp2;
@@ -298,17 +278,14 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 
 //         }
 
-
 //         row1_n[j_l] = tmp3; //rd_in_vec; //tmp3;
 //         row1_acc_n[j_l] = acc_in_vec;
-
 
 //         // line buffer
 //         j_l++;
 //         if(j_l >= end_index - 1){
 //             j_l = 0;
 //         }
-
 
 //         for(int k = 0; k < VFACTOR; k++){
 //             row_arr3[k] =  uint2FP_ript<FPPREC, DType>(tmp3.range(DSIZE * (k + 1) - 1, k * DSIZE));
@@ -320,7 +297,6 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 
 //         row_arr2[0] = uint2FP_ript<FPPREC, DType>(tmp2_b1.range(DSIZE * (VFACTOR) - 1, (VFACTOR-1) * DSIZE));
 //         row_arr2[VFACTOR + 1] = uint2FP_ript<FPPREC, DType>(tmp2_f1.range(DSIZE * (0 + 1) - 1, 0 * DSIZE));
-
 
 //         // stencil computation
 //         // this loop will be completely unrolled as parent loop is pipelined
@@ -363,8 +339,6 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 //     #undef VFACTOR
 //     #undef DSIZE
 // }
-
-
 
 // template <bool FPPREC, class DType, int DMAX>
 // static void stencil_3d( hls::stream<uint256_dt> &rd_buffer,  hls::stream<uint256_dt> &d,
@@ -423,7 +397,6 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 //     uint256_dt update_a, update_b, update_c, update_d;
 //     uint256_dt acc_in_vec, acc_out_vec;
 
-
 //     unsigned short i = 0, j = 0, k = 0;
 //     unsigned short j_p = 0, j_l = 0;
 //     for(unsigned int itr = 0; itr < gridsize; itr++) {
@@ -449,8 +422,6 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 //             i++;
 //         }
 
-
-
 //         s_1_1_0 = window_4[j_p];
 
 //         s_1_0_1 = window_3[j_l];
@@ -464,7 +435,6 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 
 //         s_1_2_1 = window_1[j_p];   // read
 //         window_2[j_l] = s_1_2_1;    //set
-
 
 //         bool cond_tmp1 = (itr < limit_read);
 //         uint256_dt tmp_rd;
@@ -482,8 +452,6 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 //         }
 //         window_1[j_p] = s_1_1_2; // set
 
-
-
 //         j_p++;
 //         if(j_p == plane_diff){
 //             j_p = 0;
@@ -493,9 +461,6 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 //         if(j_l == line_diff){
 //             j_l = 0;
 //         }
-
-
-
 
 //         vec2arr: for(int k = 0; k < VFACTOR; k++){
 //             s_1_1_2_arr[k]              =  uint2FP_ript<FPPREC, DType>(s_1_1_2.range(DSIZE * (k + 1) - 1, k * DSIZE));
@@ -521,7 +486,6 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 //             DType f1 = r1_1_2 + r1_2_1;
 //             DType f2 = r0_1_1 - r1_1_1;
 //             DType f3 = r2_1_1 + r1_0_1;
-
 
 //             DType r1 = f1 + f2;
 //             DType r2=  f3 + r1_1_0;
