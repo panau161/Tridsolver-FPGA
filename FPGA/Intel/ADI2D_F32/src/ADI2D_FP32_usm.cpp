@@ -19,13 +19,13 @@
 //
 // SPDX-License-Identifier: MIT
 // =============================================================
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 #include <vector>
 #include <iostream>
 #include "dpc_common.hpp"
 #if FPGA || FPGA_EMULATOR
-#include <CL/sycl/INTEL/fpga_extensions.hpp>
-#include <CL/sycl/INTEL/ac_types/ac_int.hpp>
+#include <sycl/ext/intel/fpga_extensions.hpp>
+#include <sycl/ext/intel/ac_types/ac_int.hpp>
 #endif
 
 using namespace sycl;
@@ -43,8 +43,8 @@ struct dPath16 {
   [[intel::fpga_register]] float data[16];
 };
 
-using rd_pipe = INTEL::pipe<class pVec16_r, dPath16, 8>;
-using wr_pipe = INTEL::pipe<class pVec16_w, dPath16, 8>;
+using rd_pipe = ext::intel::pipe<class pVec16_r, dPath16, 8>;
+using wr_pipe = ext::intel::pipe<class pVec16_w, dPath16, 8>;
 
 #define UFACTOR 2
 
@@ -54,7 +54,7 @@ struct pipeS{
 
   template <size_t idx>
   struct Pipes{
-    using pipeA = INTEL::pipe<struct_id<idx>, dPath, 8>;
+    using pipeA = ext::intel::pipe<struct_id<idx>, dPath, 8>;
   };
 
   template <size_t idx>
@@ -64,8 +64,8 @@ struct pipeS{
 
 using PipeBlock = pipeS;
 
-// using rd_pipe1 = INTEL::pipe<class rd_pipe1, dPath, 8>;
-// using wr_pipe1 = INTEL::pipe<class wr_pipe1, dPath, 8>;
+// using rd_pipe1 = ext::intel::pipe<class rd_pipe1, dPath, 8>;
+// using wr_pipe1 = ext::intel::pipe<class wr_pipe1, dPath, 8>;
 
 
 // Create an exception handler for asynchronous SYCL exceptions
@@ -469,10 +469,10 @@ int main(int argc, char* argv[]) {
   // Create device selector for the device of your interest.
 #if FPGA_EMULATOR
   // DPC++ extension: FPGA emulator selector on systems without FPGA card.
-  INTEL::fpga_emulator_selector d_selector;
+  ext::intel::fpga_emulator_selector d_selector;
 #elif FPGA
   // DPC++ extension: FPGA selector on systems with FPGA card.
-  INTEL::fpga_selector d_selector;
+  ext::intel::fpga_selector d_selector;
 #else
   // The default device selector will select the most performant device.
   default_selector d_selector;
