@@ -1,24 +1,10 @@
 //==============================================================
-// Vector Add is the equivalent of a Hello, World! sample for data parallel
-// programs. Building and running the sample verifies that your development
-// environment is setup correctly and demonstrates the use of the core features
-// of DPC++. This sample runs on both CPU and GPU (or FPGA). When run, it
-// computes on both the CPU and offload device, then compares results. If the
-// code executes on both CPU and offload device, the device name and a success
-// message are displayed. And, your development environment is setup correctly!
-//
-// For comprehensive instructions regarding DPC++ Programming, go to
-// https://software.intel.com/en-us/oneapi-programming-guide and search based on
-// relevant terms noted in the comments.
-//
-// DPC++ material used in the code sample:
-// •  A one dimensional array of data.
-// •  A device queue, buffer, accessor, and kernel.
-//==============================================================
 // Copyright © Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 // =============================================================
+
+
 #include "dpc_common.hpp"
 #include <iostream>
 #include <sycl/sycl.hpp>
