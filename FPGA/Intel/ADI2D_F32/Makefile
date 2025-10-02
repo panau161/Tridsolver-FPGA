@@ -28,9 +28,9 @@ run_hw_usm: ADI2D_F32_usm.fpga
 
 
 ADI2D_F32.fpga_emu: $(SRC)
-	$(CXX) $(CXXFLAGS_DEBUG) -fintelfpga $^ -o $@ -DFPGA_EMULATOR=1 -Xsboard=intel_s10sx_pac:pac_s10_usm
+	$(CXX) $(CXXFLAGS_DEBUG) -fintelfpga $^ -o $@ -DFPGA_EMULATOR=1
 ADI2D_F32_usm.fpga_emu_usm: $(USM_SRC)
-	$(CXX) $(CXXFLAGS) -fintelfpga $^ -o $@ -DFPGA_EMULATOR=1 -Xsboard=intel_s10sx_pac:pac_s10_usm
+	$(CXX) $(CXXFLAGS) -fintelfpga $^ -o $@ -DFPGA_EMULATOR=1
 
 
 a.o: $(SRC)
