@@ -28,12 +28,10 @@
 #include <sycl/ext/intel/ac_types/ac_int.hpp>
 #endif
 
-#include "data_types.h"
-#include "stencils.hpp"
-#include "BThomas.hpp"
-#include "DPath.hpp"
-
-// #include "BThomas.hpp"
+#include "../../lib/data_types.h"
+#include "../../lib/stencils.hpp"
+#include "../../lib/BThomas.hpp"
+#include "../../lib/DPath.hpp"
 
 
 #define UFACTOR 8

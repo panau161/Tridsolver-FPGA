@@ -33,8 +33,6 @@
 #include "../../lib/BThomas.hpp"
 #include "../../lib/DPath.hpp"
 
-// #include "BThomas.hpp"
-
 
 #define UFACTOR 1
 
