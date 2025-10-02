@@ -1,11 +1,11 @@
 CXX := icpx
-CXXFLAGS = -O2 -std=c++17
-CXXFLAGS_DEBUG = -g -O0 -fsanitize=address -fno-omit-frame-pointer -std=c++17
+CXXFLAGS = -O2 -std=c++17 -Wno-switch-bool
+CXXFLAGS_DEBUG = -O0 -g -std=c++17 -Wno-switch-bool # -fsanitize=address -fno-omit-frame-pointer
 
 SRC := src/ADI2D_FP32.cpp
 USM_SRC := src/ADI2D_FP32_usm.cpp
 
-.PHONY: fpga_emu run_emu fpga_emu_usm run_emu_usm clean 
+.PHONY: fpga_emu run_emu fpga_emu_usm run_emu_usm clean
 
 fpga_emu: ADI2D_FP32.fpga_emu
 fpga_emu_usm: ADI2D_FP32_usm.fpga_emu_usm
@@ -16,6 +16,17 @@ hw_usm: ADI2D_FP32_usm.fpga
 report: ADI2D_FP32_report.a
 report_usm: ADI2D_FP32_usm_report.a_usm
 
+run_emu: ADI2D_FP32.fpga_emu
+	./ADI2D_FP32.fpga_emu 1 32 32 32
+run_emu_usm: ADI2D_FP32_usm.fpga_emu_usm
+	./ADI2D_FP32_usm.fpga_emu_usm 1 32 32 4 1
+
+run_hw: ADI2D_FP32.fpga
+	./ADI2D_FP32.fpga
+run_hw_usm: ADI2D_FP32_usm.fpga
+	./ADI2D_FP32_usm.fpga
+
+
 ADI2D_FP32.fpga_emu: $(SRC)
 	$(CXX) $(CXXFLAGS_DEBUG) -fintelfpga $^ -o $@ -DFPGA_EMULATOR=1 -Xsboard=intel_s10sx_pac:pac_s10
 ADI2D_FP32_usm.fpga_emu_usm: $(USM_SRC)
@@ -24,7 +35,7 @@ ADI2D_FP32_usm.fpga_emu_usm: $(USM_SRC)
 
 a.o: $(SRC)
 	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xsboard=intel_s10sx_pac:pac_s10
-a_usm.o: $(USM_SRC) 
+a_usm.o: $(USM_SRC)
 	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xsboard=intel_s10sx_pac:pac_s10_usm
 
 ADI2D_FP32.fpga: a.o
@@ -32,23 +43,11 @@ ADI2D_FP32.fpga: a.o
 ADI2D_FP32_usm.fpga: a_usm.o
 	$(CXX) $(CXXFLAGS) -fintelfpga $^ -o $@ -Xshardware -Xsboard=intel_s10sx_pac:pac_s10_usm
 
-run_emu: ADI2D_FP32.fpga_emu
-	./ADI2D_FP32.fpga_emu 2 32 32 8
-run_emu_usm: ADI2D_FP32_usm.fpga_emu_usm
-	./ADI2D_FP32_usm.fpga_emu_usm 1 32 32 4 1
-
-
-run_hw: ADI2D_FP32.fpga
-	./ADI2D_FP32.fpga
-run_hw_usm: ADI2D_FP32_usm.fpga
-	./ADI2D_FP32_usm.fpga	
 
 dev.o: $(SRC)
 	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xsboard=intel_s10sx_pac:pac_s10
 dev_usm.o: $(USM_SRC)
 	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xsboard=intel_s10sx_pac:pac_s10_usm
-
-
 
 ADI2D_FP32_report.a: dev.o
 	$(CXX) $(CXXFLAGS) -fintelfpga -fsycl-link $^ -o $@ -Xshardware -Xsboard=intel_s10sx_pac:pac_s10
@@ -57,4 +56,4 @@ ADI2D_FP32_usm_report.a_usm: dev_usm.o
 
 
 clean:
-	rm -rf *.o *.d *.out *.mon *.emu *.aocr *.aoco *.prj *.fpga_emu *.fpga_emu_buffers ADI2D_FP32.fpga  ADI2D_FP32_usm.fpga *.a
+	rm -rf *.o *.d *.out *.mon *.emu *.aocr *.aoco *.prj *.fpga_emu *.fpga_emu_buffers ADI2D_FP32.fpga ADI2D_FP32_usm.fpga *.a
