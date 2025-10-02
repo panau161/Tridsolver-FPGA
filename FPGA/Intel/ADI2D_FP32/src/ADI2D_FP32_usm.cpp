@@ -21,7 +21,7 @@ size_t vector_size = 10000;
 typedef std::vector<float> IntVector;
 const int unroll_factor = 2;
 
-struct dPath {
+struct dPath4 {
   [[intel::fpga_register]] float data[4];
 };
 
@@ -41,7 +41,7 @@ struct pipeS {
 
   template <size_t idx>
   struct Pipes {
-    using pipeA = ext::intel::pipe<struct_id<idx>, dPath, 8>;
+    using pipeA = ext::intel::pipe<struct_id<idx>, dPath4, 8>;
   };
 
   template <size_t idx>
@@ -50,8 +50,8 @@ struct pipeS {
 
 using PipeBlock = pipeS;
 
-// using rd_pipe1 = ext::intel::pipe<class rd_pipe1, dPath, 8>;
-// using wr_pipe1 = ext::intel::pipe<class wr_pipe1, dPath, 8>;
+// using rd_pipe1 = ext::intel::pipe<class rd_pipe1, dPath4, 8>;
+// using wr_pipe1 = ext::intel::pipe<class wr_pipe1, dPath4, 8>;
 
 // Create an exception handler for asynchronous SYCL exceptions
 static auto exception_handler = [](sycl::exception_list e_list) {
@@ -94,7 +94,7 @@ void PipeConvert_512_128(queue &q, int size) {
       struct dPath16 data16;
       [[intel::initiation_interval(1)]]
       for (int i = 0; i < total_itr; i++) {
-        struct dPath data;
+        struct dPath4 data;
         if ((i & 3) == 0) {
           data16 = rd_pipe::read();
         }
@@ -138,14 +138,14 @@ void stencil_compute(queue &q, ac_int<12, true> nx, ac_int<12, true> ny, ac_int<
       const int max_dpethl = DMAX / VFACTOR;
       const int max_dpethP = DMAX * DMAX / VFACTOR;
 
-      struct dPath s_1_1_2, s_1_2_1, s_1_1_1, s_1_1_1_b, s_1_1_1_f, s_1_0_1, s_1_1_0;
+      struct dPath4 s_1_1_2, s_1_2_1, s_1_1_1, s_1_1_1_b, s_1_1_1_f, s_1_0_1, s_1_1_0;
 
-      [[intel::fpga_memory("BLOCK_RAM")]] struct dPath window_1[max_dpethP];
-      struct dPath window_2[max_dpethl];
-      struct dPath window_3[max_dpethl];
-      [[intel::fpga_memory("BLOCK_RAM")]] struct dPath window_4[max_dpethP];
+      [[intel::fpga_memory("BLOCK_RAM")]] struct dPath4 window_1[max_dpethP];
+      struct dPath4 window_2[max_dpethl];
+      struct dPath4 window_3[max_dpethl];
+      [[intel::fpga_memory("BLOCK_RAM")]] struct dPath4 window_4[max_dpethP];
 
-      struct dPath vec_wr;
+      struct dPath4 vec_wr;
       [[intel::fpga_register]] float mid_row[VFACTOR + 2];
       ac_int<12, true> j_ld = 0, j_pd = 0;
 
@@ -264,7 +264,7 @@ void PipeConvert_128_512(queue &q, int size) {
       struct dPath16 data16;
       [[intel::initiation_interval(1)]]
       for (int i = 0; i < total_itr; i++) {
-        struct dPath data;
+        struct dPath4 data;
         data = pipeS::PipeAt<idx>::read();
         #pragma unroll VFACTOR
         for (int v = 0; v < VFACTOR; v++) {

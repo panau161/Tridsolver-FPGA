@@ -21,12 +21,12 @@ size_t vector_size = 10000;
 typedef std::vector<float> IntVector;
 const int unroll_factor = 2;
 
-struct dPath {
+struct dPath8 {
   [[intel::fpga_register]] float data[8];
 };
 
-using rd_pipe = ext::intel::pipe<class pVec8, dPath, 8000000>;
-using wr_pipe = ext::intel::pipe<class pVec8, dPath, 8000000>;
+using rd_pipe = ext::intel::pipe<class pVec8, dPath8, 8000000>;
+using wr_pipe = ext::intel::pipe<class pVec8, dPath8, 8000000>;
 
 #define UFACTOR 35
 
@@ -37,7 +37,7 @@ struct pipeS {
 
   template <size_t idx>
   struct Pipes {
-    using pipeA = ext::intel::pipe<struct_id<idx>, dPath, 8>;
+    using pipeA = ext::intel::pipe<struct_id<idx>, dPath8, 8>;
   };
 
   template <size_t idx>
@@ -46,8 +46,8 @@ struct pipeS {
 
 using PipeBlock = pipeS;
 
-// using rd_pipe1 = ext::intel::pipe<class rd_pipe1, dPath, 8>;
-// using wr_pipe1 = ext::intel::pipe<class wr_pipe1, dPath, 8>;
+// using rd_pipe1 = ext::intel::pipe<class rd_pipe1, dPath8, 8>;
+// using wr_pipe1 = ext::intel::pipe<class wr_pipe1, dPath8, 8>;
 
 // Create an exception handler for asynchronous SYCL exceptions
 static auto exception_handler = [](sycl::exception_list e_list) {
@@ -71,7 +71,7 @@ void stencil_read(queue &q, buffer<float, 1> &in_buf, ac_int<14, true> nx, ac_in
       int total_itr = (nx * ny * nz) / VFACTOR;
       [[intel::initiation_interval(1)]]
       for (int i = 0; i < total_itr; i++) {
-        struct dPath vec;
+        struct dPath8 vec;
         #pragma unroll VFACTOR
         for (int v = 0; v < VFACTOR; v++) {
           vec.data[v] = in[i * VFACTOR + v];
@@ -90,14 +90,14 @@ void stencil_compute(queue &q, ac_int<14, true> nx, ac_int<14, true> ny, ac_int<
     std::string instance_name = "compute" + std::to_string(idx);
     h.single_task<class struct_idX<IdX>>([=]() [[intel::kernel_args_restrict]] {
       int total_itr = ((nx / VFACTOR) * (ny * nz + 1));
-      struct dPath s_1_2, s_2_1, s_1_1, s_0_1, s_1_0;
+      struct dPath8 s_1_2, s_2_1, s_1_1, s_0_1, s_1_0;
 
       const int max_dpethl = DMAX / VFACTOR;
 
-      struct dPath wind1[max_dpethl];
-      struct dPath wind2[max_dpethl];
+      struct dPath8 wind1[max_dpethl];
+      struct dPath8 wind2[max_dpethl];
 
-      struct dPath vec_wr;
+      struct dPath8 vec_wr;
       [[intel::fpga_register]] float mid_row[10];
       ac_int<14, true> i_ld = 0;
 
@@ -181,14 +181,14 @@ void stencil_compute(queue &q, ac_int<14, true> nx, ac_int<14, true> ny, ac_int<
 //     const int max_dpethl = DMAX/VFACTOR;
 //     const int max_dpethP = DMAX/VFACTOR;
 
-//     struct dPath s_1_1_2, s_1_2_1, s_1_1_1, s_1_1_1_b, s_1_1_1_f, s_1_0_1, s_1_1_0;
+//     struct dPath8 s_1_1_2, s_1_2_1, s_1_1_1, s_1_1_1_b, s_1_1_1_f, s_1_0_1, s_1_1_0;
 
-//     [[intel::fpga_memory("BLOCK_RAM")]] struct dPath window_1[max_dpethP];
-//     struct dPath window_2[max_dpethl];
-//     struct dPath window_3[max_dpethl];
-//     [[intel::fpga_memory("BLOCK_RAM")]] struct dPath window_4[max_dpethP];
+//     [[intel::fpga_memory("BLOCK_RAM")]] struct dPath8 window_1[max_dpethP];
+//     struct dPath8 window_2[max_dpethl];
+//     struct dPath8 window_3[max_dpethl];
+//     [[intel::fpga_memory("BLOCK_RAM")]] struct dPath8 window_4[max_dpethP];
 
-//     struct dPath vec_wr;
+//     struct dPath8 vec_wr;
 //     [[intel::fpga_register]] float mid_row[VFACTOR+2];
 //     ac_int<12,true>  j_ld = 0, j_pd = 0;
 
@@ -308,7 +308,7 @@ void stencil_write(queue &q, buffer<float, 1> &out_buf, ac_int<14, true> nx, ac_
       int total_itr = (nx * ny * nz) / VFACTOR;
       [[intel::initiation_interval(1)]]
       for (int i = 0; i < total_itr; i++) {
-        struct dPath vec = pipeS::PipeAt<idx>::read();
+        struct dPath8 vec = pipeS::PipeAt<idx>::read();
         #pragma unroll VFACTOR
         for (int v = 0; v < VFACTOR; v++) {
           out[i * 8 + v] = vec.data[v];
