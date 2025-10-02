@@ -2,6 +2,8 @@ CXX := icpx
 CXXFLAGS = -O2 -std=c++17 -Wno-switch-bool
 CXXFLAGS_DEBUG = -O0 -g -std=c++17 -Wno-switch-bool # -fsanitize=address -fno-omit-frame-pointer
 
+BOARD = ofs_d5005_usm
+
 SRC := src/ADI2D_FP32.cpp
 USM_SRC := src/ADI2D_FP32_usm.cpp
 
@@ -34,25 +36,25 @@ ADI2D_FP32_usm.fpga_emu_usm: $(USM_SRC)
 
 
 a.o: $(SRC)
-	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xsboard=intel_s10sx_pac:pac_s10
+	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xstarget=$(BOARD)
 a_usm.o: $(USM_SRC)
-	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xsboard=intel_s10sx_pac:pac_s10_usm
+	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xstarget=$(BOARD)
 
 ADI2D_FP32.fpga: a.o
-	$(CXX) $(CXXFLAGS) -fintelfpga $^ -o $@ -Xshardware -Xsboard=intel_s10sx_pac:pac_s10
+	$(CXX) $(CXXFLAGS) -fintelfpga $^ -o $@ -Xshardware -Xstarget=$(BOARD)
 ADI2D_FP32_usm.fpga: a_usm.o
-	$(CXX) $(CXXFLAGS) -fintelfpga $^ -o $@ -Xshardware -Xsboard=intel_s10sx_pac:pac_s10_usm
+	$(CXX) $(CXXFLAGS) -fintelfpga $^ -o $@ -Xshardware -Xstarget=$(BOARD)
 
 
 dev.o: $(SRC)
-	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xsboard=intel_s10sx_pac:pac_s10
+	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xstarget=$(BOARD)
 dev_usm.o: $(USM_SRC)
-	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xsboard=intel_s10sx_pac:pac_s10_usm
+	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1 -Xstarget=$(BOARD)
 
 ADI2D_FP32_report.a: dev.o
-	$(CXX) $(CXXFLAGS) -fintelfpga -fsycl-link $^ -o $@ -Xshardware -Xsboard=intel_s10sx_pac:pac_s10
+	$(CXX) $(CXXFLAGS) -fintelfpga -fsycl-link $^ -o $@ -Xshardware -Xstarget=$(BOARD)
 ADI2D_FP32_usm_report.a_usm: dev_usm.o
-	$(CXX) $(CXXFLAGS) -fintelfpga -fsycl-link $^ -o $@ -Xshardware -Xsboard=intel_s10sx_pac:pac_s10_usm
+	$(CXX) $(CXXFLAGS) -fintelfpga -fsycl-link $^ -o $@ -Xshardware -Xstarget=$(BOARD)
 
 
 clean:
